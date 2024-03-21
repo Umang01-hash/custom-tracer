@@ -3,7 +3,7 @@ receivers:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
-  traceCollectorService:
+  traceReceiver:
     interval: 1m
     number_of_traces: 10
 
@@ -22,7 +22,7 @@ exporters:
 service:
   pipelines:
     traces:
-      receivers: [otlp, traceCollectorService]
+      receivers: [otlp, traceReceiver]
       processors: [batch]
       exporters: [otlp/jaeger, debug]
   telemetry:

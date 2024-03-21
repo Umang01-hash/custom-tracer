@@ -3,7 +3,7 @@
 package main
 
 import (
-	"github.com/umang01-hash/traceCollectorService"
+	"github.com/umang01-hash/traceReceiver"
 	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
@@ -28,7 +28,7 @@ func components() (otelcol.Factories, error) {
 
 	factories.Receivers, err = receiver.MakeFactoryMap(
 		otlpreceiver.NewFactory(),
-		traceCollectorService.NewFactory(),
+		traceReceiver.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err

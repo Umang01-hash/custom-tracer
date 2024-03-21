@@ -4,11 +4,11 @@ module go.opentelemetry.io/collector/cmd/builder
 
 go 1.22.0
 
-replace github.com/umang01-hash/traceCollectorService v0.0.0-20240320105003-d80e8e003903 => ./../traceCollectorService
+replace github.com/umang01-hash/traceReceiver v0.0.0-20240320105003-d80e8e003903 => ./../traceReceiver
 
 require (
 	github.com/stretchr/testify v1.8.4
-	github.com/umang01-hash/traceCollectorService v0.0.0-20240320105003-d80e8e003903
+	github.com/umang01-hash/traceReceiver v0.0.0-20240320105003-d80e8e003903
 	go.opentelemetry.io/collector/component v0.96.0
 	go.opentelemetry.io/collector/connector v0.96.0
 	go.opentelemetry.io/collector/exporter v0.96.0
