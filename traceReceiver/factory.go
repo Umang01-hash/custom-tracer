@@ -2,9 +2,6 @@ package traceReceiver
 
 import (
 	"context"
-	"strconv"
-	"time"
-
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 
@@ -12,13 +9,12 @@ import (
 )
 
 const (
-	typeStr         = "traceReceiver"
-	defaultInterval = 1 * time.Minute
+	typeStr = "traceReceiver"
 )
 
 func createDefaultConfig() component.Config {
 	return &Config{
-		Interval: strconv.FormatInt(int64(defaultInterval), 10),
+		Port: "8080",
 	}
 }
 

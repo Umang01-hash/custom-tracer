@@ -2,24 +2,20 @@ package traceReceiver
 
 import (
 	"fmt"
-	"time"
+	"strconv"
 )
 
 // Config represents the receiver config settings within the collector's config.yaml
 type Config struct {
-	Interval       string `mapstructure:"interval"`
+	Port           string `mapstructure:"port"`
 	NumberOfTraces int    `mapstructure:"number_of_traces"`
 }
 
 // Validate checks if the receiver configuration is valid
 func (cfg *Config) Validate() error {
-	interval, err := time.ParseDuration(cfg.Interval)
+	_, err := strconv.Atoi(cfg.Port)
 	if err != nil {
-		return fmt.Errorf("failed to parse interval duration: %w", err)
-	}
-
-	if interval.Minutes() < 1 {
-		return fmt.Errorf("when defined, the interval has to be set to at least 1 minute (1m)")
+		return fmt.Errorf("failed to parse port : %w", err)
 	}
 
 	if cfg.NumberOfTraces < 1 {

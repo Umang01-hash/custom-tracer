@@ -4,7 +4,7 @@ receivers:
       grpc:
         endpoint: 0.0.0.0:4317
   traceReceiver:
-    interval: 1m
+    port: 8080
     number_of_traces: 10
 
 processors:
