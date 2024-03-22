@@ -10,7 +10,6 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -24,6 +23,16 @@ type traceReceiver struct {
 	config       *Config
 	db           *sql.DB
 	mux          *http.ServeMux
+}
+
+type span struct {
+	TraceID   string            `json:"traceId"`
+	ID        string            `json:"id"`
+	ParentID  string            `json:"parentId,omitempty"`
+	Name      string            `json:"name"`
+	Timestamp int64             `json:"timestamp"`
+	Duration  int64             `json:"duration"`
+	Tags      map[string]string `json:"tags"`
 }
 
 func (tr *traceReceiver) Start(ctx context.Context, host component.Host) error {
@@ -42,7 +51,7 @@ func (tr *traceReceiver) Start(ctx context.Context, host component.Host) error {
 	}
 
 	tr.mux = http.NewServeMux()
-	tr.mux.HandleFunc("/v1/traces", func(w http.ResponseWriter, r *http.Request) {
+	tr.mux.HandleFunc("/api/v2/spans", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
 		if r.Method != http.MethodPost {
@@ -51,7 +60,7 @@ func (tr *traceReceiver) Start(ctx context.Context, host component.Host) error {
 			return
 		}
 
-		var traces ptrace.Traces
+		var traces []span
 		if err := json.NewDecoder(r.Body).Decode(&traces); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, "Error decoding traces: %v", err)
@@ -59,7 +68,7 @@ func (tr *traceReceiver) Start(ctx context.Context, host component.Host) error {
 		}
 
 		// Process the received traces
-		if err := tr.processTraces(ctx, nil); err != nil {
+		if err := tr.processTraces(ctx, traces); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "Error processing traces: %v", err)
 			return
@@ -87,30 +96,17 @@ func (tr *traceReceiver) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (tr *traceReceiver) processTraces(ctx context.Context, td *ptrace.Traces) error {
-	fmt.Println(td)
-	for i := 0; i < td.ResourceSpans().Len(); i++ {
-		rs := td.ResourceSpans().At(i)
+func (tr *traceReceiver) processTraces(ctx context.Context, spans []span) error {
+	for _, span := range spans {
+		spanJSON, err := json.Marshal(span)
+		if err != nil {
+			return err
+		}
 
-		for j := 0; j < rs.ScopeSpans().Len(); j++ {
-			ilss := rs.ScopeSpans().At(j)
-
-			// Iterate over the spans in the scope span
-			for k := 0; k < ilss.Spans().Len(); k++ {
-				span := ilss.Spans().At(k)
-
-				spanJSON, err := json.Marshal(span)
-				if err != nil {
-					return err
-				}
-
-				query := `INSERT INTO traces (data) VALUES (?)`
-				_, err = tr.db.ExecContext(ctx, query, string(spanJSON))
-				if err != nil {
-					return err
-				}
-			}
-
+		query := `INSERT INTO traces (data) VALUES (?)`
+		_, err = tr.db.ExecContext(ctx, query, string(spanJSON))
+		if err != nil {
+			return err
 		}
 	}
 
