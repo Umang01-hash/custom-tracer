@@ -14,8 +14,8 @@ import (
 func main() {
 	app := gofr.New()
 
-	app.POST("/api/v2/spans", PostHandler)
-	app.GET("/api/v2/traces", GetHandler)
+	app.POST("/api/spans", PostHandler)
+	app.GET("/api/traces", GetHandler)
 
 	app.Run()
 }

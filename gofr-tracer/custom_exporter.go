@@ -1,26 +1,27 @@
 package gofr
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"go.opentelemetry.io/otel/attribute"
+	"gofr.dev/pkg/gofr/service"
 	"net/http"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"gofr.dev/pkg/gofr/logging"
 )
 
 type CustomExporter struct {
 	endpoint string
-	client   *http.Client
+	logger   logging.Logger
 }
 
-func NewCustomExporter(endpoint string) *CustomExporter {
+func NewCustomExporter(endpoint string, logger logging.Logger) *CustomExporter {
 	return &CustomExporter{
 		endpoint: endpoint,
-		client:   &http.Client{Timeout: 5 * time.Second}, // Set a timeout for HTTP requests
+		logger:   logger,
 	}
 }
 
@@ -35,7 +36,7 @@ type Span struct {
 }
 
 func (e *CustomExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	return e.processSpans(ctx, spans)
+	return e.processSpans(e.logger, spans)
 }
 
 // Shutdown shuts down the exporter.
@@ -43,7 +44,7 @@ func (e *CustomExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (e *CustomExporter) processSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+func (e *CustomExporter) processSpans(logger logging.Logger, spans []sdktrace.ReadOnlySpan) error {
 	if len(spans) == 0 {
 		return nil
 	}
@@ -55,15 +56,13 @@ func (e *CustomExporter) processSpans(ctx context.Context, spans []sdktrace.Read
 		return fmt.Errorf("failed to marshal spans: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.endpoint, bytes.NewReader(payload))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+	svc := service.NewHTTPService(e.endpoint, logger, nil)
 
-	resp, err := e.client.Do(req)
+	resp, err := svc.PostWithHeaders(context.Background(), "", nil, payload,
+		map[string]string{"Content-Type": "application/json"})
 	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
+		logger.Error(err)
+		return err
 	}
 	defer resp.Body.Close()
 
