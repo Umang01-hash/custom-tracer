@@ -28,7 +28,7 @@ func Test_ExportSpans(t *testing.T) {
 		spans []sdktrace.ReadOnlySpan
 	}{
 		{"Empty Spans Slice", []sdktrace.ReadOnlySpan{}},
-		{"Success case", provideSampleSpan()},
+		{"Success case", provideSampleSpan(t)},
 	}
 
 	for i, tc := range tests {
@@ -45,14 +45,19 @@ func Test_ExportSpansError(t *testing.T) {
 
 	exporter := NewCustomExporter(server.URL, logging.NewLogger(logging.INFO))
 
-	err := exporter.ExportSpans(context.Background(), provideSampleSpan())
+	err := exporter.ExportSpans(context.Background(), provideSampleSpan(t))
 	assert.Error(t, err, "Expected error for failed request")
 }
 
-func provideSampleSpan() []sdktrace.ReadOnlySpan {
+func provideSampleSpan(t *testing.T) []sdktrace.ReadOnlySpan {
 	tp := sdktrace.NewTracerProvider()
 
-	defer tp.Shutdown(context.Background())
+	defer func(tp *sdktrace.TracerProvider, ctx context.Context) {
+		err := tp.Shutdown(ctx)
+		if err != nil {
+			t.Error(err)
+		}
+	}(tp, context.Background())
 
 	otel.SetTracerProvider(tp)
 

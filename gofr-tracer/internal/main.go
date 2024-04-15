@@ -35,9 +35,9 @@ func GetHandler(c *gofr.Context) (interface{}, error) {
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return nil, errors.New(fmt.Sprintf("trace not found for traceID : %v", traceID))
+			return nil, fmt.Errorf("trace not found for traceID : %v", traceID)
 		default:
-			return nil, errors.New(fmt.Sprintf("failed to query traces table: %v", err))
+			return nil, fmt.Errorf("failed to query traces table: %v", err)
 		}
 	}
 
