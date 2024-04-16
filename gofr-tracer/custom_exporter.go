@@ -1,16 +1,14 @@
 package gofr
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"gofr.dev/pkg/gofr/service"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gofr.dev/pkg/gofr/logging"
 )
@@ -28,13 +26,14 @@ func NewCustomExporter(endpoint string, logger logging.Logger) *CustomExporter {
 }
 
 type Span struct {
-	TraceID   string            `json:"traceId"`
-	ID        string            `json:"id"`
-	ParentID  string            `json:"parentId,omitempty"`
-	Name      string            `json:"name"`
-	Timestamp int64             `json:"timestamp"`
-	Duration  int64             `json:"duration"`
-	Tags      map[string]string `json:"tags,omitempty"`
+	TraceID       string            `json:"traceId"`
+	ID            string            `json:"id"`
+	ParentID      string            `json:"parentId,omitempty"`
+	Name          string            `json:"name"`
+	Timestamp     int64             `json:"timestamp"`
+	Duration      int64             `json:"duration"`
+	Tags          map[string]string `json:"tags,omitempty"`
+	LocalEndpoint map[string]string `json:"localEndpoint"`
 }
 
 func (e *CustomExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
@@ -58,10 +57,14 @@ func (e *CustomExporter) processSpans(logger logging.Logger, spans []sdktrace.Re
 		return fmt.Errorf("failed to marshal spans: %w", err)
 	}
 
-	svc := service.NewHTTPService(e.endpoint, logger, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "POST", e.endpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := svc.PostWithHeaders(context.Background(), "", nil, payload,
-		map[string]string{"Content-Type": "application/json"})
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -78,7 +81,7 @@ func (e *CustomExporter) processSpans(logger logging.Logger, spans []sdktrace.Re
 func convertSpans(spans []sdktrace.ReadOnlySpan) []Span {
 	convertedSpans := make([]Span, 0, len(spans))
 
-	for _, s := range spans {
+	for i, s := range spans {
 		convertedSpan := Span{
 			TraceID:   s.SpanContext().TraceID().String(),
 			ID:        s.SpanContext().SpanID().String(),
@@ -87,6 +90,9 @@ func convertSpans(spans []sdktrace.ReadOnlySpan) []Span {
 			Timestamp: s.StartTime().UnixNano() / int64(time.Millisecond),
 			Duration:  s.EndTime().Sub(s.StartTime()).Milliseconds(),
 			Tags:      make(map[string]string, len(s.Attributes())+len(s.Resource().Attributes())),
+			LocalEndpoint: map[string]string{
+				"serviceName": s.Name(),
+			},
 		}
 
 		for _, kv := range s.Attributes() {
@@ -99,10 +105,9 @@ func convertSpans(spans []sdktrace.ReadOnlySpan) []Span {
 			convertedSpan.Tags[k] = v
 		}
 
-		if !strings.HasPrefix(s.Name(), "http") {
-			convertedSpans = append(convertedSpans, convertedSpan)
-		}
+		convertedSpans = append(convertedSpans, convertedSpan)
 
+		convertedSpans[i].LocalEndpoint = map[string]string{"serviceName": s.Name()}
 	}
 
 	return convertedSpans

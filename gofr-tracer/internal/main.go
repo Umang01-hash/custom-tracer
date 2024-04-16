@@ -49,10 +49,11 @@ func GetHandler(c *gofr.Context) (interface{}, error) {
 
 	for rows.Next() {
 		var (
-			s        model.Span
-			tagsJSON []byte
+			s             model.Span
+			tagsJSON      []byte
+			localEndpoint []byte
 		)
-		err := rows.Scan(&s.ID, &s.TraceID, &s.ParentID, &s.Name, &s.Duration, &s.Timestamp, &tagsJSON)
+		err := rows.Scan(&s.ID, &s.TraceID, &s.ParentID, &s.Name, &s.Duration, &s.Timestamp, &tagsJSON, &localEndpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -60,6 +61,11 @@ func GetHandler(c *gofr.Context) (interface{}, error) {
 		if err := json.Unmarshal(tagsJSON, &s.Tags); err != nil {
 			return nil, err
 		}
+
+		if err := json.Unmarshal(localEndpoint, &s.LocalEndpoint); err != nil {
+			return nil, err
+		}
+
 		spans = append(spans, s)
 	}
 

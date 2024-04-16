@@ -54,8 +54,13 @@ func ProcessTraces(c *gofr.Context, spans []model.Span) error {
 
 		escapedJSON := strings.ReplaceAll(string(tagsJSON), "'", "\\'")
 
-		_, err = txn.Exec("INSERT INTO spans (trace_id, parent_id, name, duration, timestamp, tags) VALUES (?, ?, ?, ?, ?, ?)",
-			traceMap[span.TraceID], span.ParentID, span.Name, span.Duration, span.Timestamp, escapedJSON)
+		localEndpoint, err := json.Marshal(span.LocalEndpoint)
+		if err != nil {
+			return err
+		}
+
+		_, err = txn.Exec("INSERT INTO spans (trace_id, parent_id, name, duration, timestamp, tags,local_endpoint) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			traceMap[span.TraceID], span.ParentID, span.Name, span.Duration, span.Timestamp, escapedJSON, localEndpoint)
 		if err != nil {
 			return err
 		}
