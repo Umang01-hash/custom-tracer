@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"gofr.dev/gofr-tracer/internal/migrations"
 	"gofr.dev/gofr-tracer/internal/model"
 	"gofr.dev/gofr-tracer/internal/processor"
 	"gofr.dev/pkg/gofr"
@@ -13,6 +14,8 @@ import (
 
 func main() {
 	app := gofr.New()
+
+	app.Migrate(migrations.All())
 
 	app.POST("/api/spans", PostHandler)
 	app.GET("/api/traces", GetHandler)
