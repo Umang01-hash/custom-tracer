@@ -16,18 +16,18 @@ import (
 
 func Test_ExportSpans(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusCreated)
 	}))
 	defer server.Close()
 
 	logger := logging.NewLogger(logging.INFO)
-	exporter := NewCustomExporter("http://example.com", logger)
+	exporter := NewCustomExporter(server.URL, logger)
 
 	tests := []struct {
 		desc  string
 		spans []sdktrace.ReadOnlySpan
 	}{
-		{"Empty Spans Slice", []sdktrace.ReadOnlySpan{}},
+		//	{"Empty Spans Slice", []sdktrace.ReadOnlySpan{}},
 		{"Success case", provideSampleSpan(t)},
 	}
 

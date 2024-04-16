@@ -66,7 +66,7 @@ func (e *CustomExporter) processSpans(logger logging.Logger, spans []sdktrace.Re
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
 	}
 
