@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	"gofr.dev/pkg/gofr/service"
-	"net/http"
-	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gofr.dev/pkg/gofr/logging"
@@ -97,7 +99,10 @@ func convertSpans(spans []sdktrace.ReadOnlySpan) []Span {
 			convertedSpan.Tags[k] = v
 		}
 
-		convertedSpans = append(convertedSpans, convertedSpan)
+		if !strings.HasPrefix(s.Name(), "http") {
+			convertedSpans = append(convertedSpans, convertedSpan)
+		}
+
 	}
 
 	return convertedSpans
